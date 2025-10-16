@@ -9,7 +9,11 @@ def create_app():
     app.config.from_object(Config)
 
     # Initialize CORS
-    CORS(app, origins=app.config['CORS_ORIGINS'], supports_credentials=True)
+    CORS(app,
+         origins=app.config['CORS_ORIGINS'],
+         supports_credentials=True,
+         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+         allow_headers=['Content-Type', 'Authorization'])
 
     # Initialize database
     db.init_app(app)
@@ -21,6 +25,7 @@ def create_app():
     from routes.report import report_bp
     from routes.audit import audit_bp
     from routes.client import client_bp
+    from routes.payment import payment_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(billing_bp, url_prefix='/api/billing')
@@ -28,6 +33,7 @@ def create_app():
     app.register_blueprint(report_bp, url_prefix='/api/report')
     app.register_blueprint(audit_bp, url_prefix='/api/audit')
     app.register_blueprint(client_bp, url_prefix='/api/client')
+    app.register_blueprint(payment_bp, url_prefix='/api/payment')
 
     # Health check endpoint
     @app.route('/api/health', methods=['GET'])

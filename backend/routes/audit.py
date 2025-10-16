@@ -18,7 +18,7 @@ def get_audit_logs():
         client_id = g.user['client_id']
 
         # Get query parameters
-        action_type = request.args.get('action_type')
+        action = request.args.get('action')
         date_from = request.args.get('date_from')
         date_to = request.args.get('date_to')
         page = int(request.args.get('page', 1))
@@ -27,8 +27,8 @@ def get_audit_logs():
         # Build query
         query = AuditLog.query.filter_by(client_id=client_id)
 
-        if action_type:
-            query = query.filter_by(action_type=action_type)
+        if action:
+            query = query.filter_by(action=action)
 
         if date_from:
             query = query.filter(AuditLog.timestamp >= date_from)
@@ -45,7 +45,18 @@ def get_audit_logs():
         # Enrich logs with user emails
         log_list = []
         for log in logs:
-            log_dict = log.to_dict()
+            log_dict = {
+                'audit_id': log.audit_id,
+                'action': log.action,
+                'table_name': log.table_name,
+                'record_id': log.record_id,
+                'user_id': log.user_id,
+                'old_data': log.old_data,
+                'new_data': log.new_data,
+                'ip_address': log.ip_address,
+                'user_agent': log.user_agent,
+                'created_at': log.created_at.isoformat() if log.created_at else None
+            }
 
             # Get user email
             if log.user_id:
@@ -54,20 +65,12 @@ def get_audit_logs():
             else:
                 log_dict['user_email'] = 'System'
 
-            # Create readable description
-            log_dict['description'] = f"{log.action_type} on {log.table_name}"
-
             log_list.append(log_dict)
 
         return jsonify({
             'success': True,
             'logs': log_list,
-            'pagination': {
-                'page': page,
-                'limit': limit,
-                'total_records': total_records,
-                'total_pages': (total_records + limit - 1) // limit
-            }
+            'total_pages': (total_records + limit - 1) // limit
         }), 200
 
     except Exception as e:

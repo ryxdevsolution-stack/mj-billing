@@ -24,13 +24,13 @@ def generate_report():
         client_id = g.user['client_id']
 
         # Validate required fields
-        required_fields = ['report_type', 'date_from', 'date_to']
+        required_fields = ['start_date', 'end_date']
         for field in required_fields:
             if field not in data:
                 return jsonify({'error': f'Missing required field: {field}'}), 400
 
-        date_from = datetime.fromisoformat(data['date_from'].replace('Z', '+00:00')).date()
-        date_to = datetime.fromisoformat(data['date_to'].replace('Z', '+00:00')).date()
+        date_from = datetime.fromisoformat(data['start_date']).date()
+        date_to = datetime.fromisoformat(data['end_date']).date()
 
         # Query GST billing data
         gst_bills = GSTBilling.query.filter(
@@ -60,7 +60,7 @@ def generate_report():
 
         # Get payment type names
         payment_types = PaymentType.query.filter_by(client_id=client_id).all()
-        payment_map = {pt.payment_type_id: pt.payment_name for pt in payment_types}
+        payment_map = {pt.payment_type_id: pt.type_name for pt in payment_types}
 
         for bill in gst_bills:
             payment_name = payment_map.get(bill.payment_type, 'Unknown')
@@ -74,7 +74,7 @@ def generate_report():
         new_report = Report(
             report_id=str(uuid.uuid4()),
             client_id=client_id,
-            report_type=data['report_type'],
+            report_type='sales',
             date_from=date_from,
             date_to=date_to,
             total_gst_bills=total_gst_bills,
@@ -96,14 +96,15 @@ def generate_report():
 
         return jsonify({
             'success': True,
-            'report_id': new_report.report_id,
-            'summary': {
-                'total_gst_bills': total_gst_bills,
-                'total_non_gst_bills': total_non_gst_bills,
-                'total_revenue': str(total_revenue),
-                'total_gst_amount': str(total_gst_amount),
-                'total_non_gst_amount': str(total_non_gst_amount),
-                'payment_breakdown': payment_breakdown
+            'report': {
+                'report_id': new_report.report_id,
+                'start_date': str(date_from),
+                'end_date': str(date_to),
+                'total_sales': str(total_revenue),
+                'gst_sales': str(total_gst_amount),
+                'non_gst_sales': str(total_non_gst_amount),
+                'payment_breakdown': payment_breakdown,
+                'created_at': new_report.created_at.isoformat()
             }
         }), 201
 
